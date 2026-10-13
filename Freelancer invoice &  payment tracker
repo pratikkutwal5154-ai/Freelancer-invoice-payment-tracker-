@@ -1,0 +1,411 @@
+Sure — here’s a simple Freelancer Invoice & Payment Tracker in HTML, CSS, and JavaScript. It lets you add invoices, track paid/pending/overdue payments, and see totals.
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Freelancer Invoice & Payment Tracker</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: Arial, sans-serif;
+    }
+
+    body {
+      background: #f4f6f8;
+      color: #222;
+      padding: 30px;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: auto;
+    }
+
+    h1 {
+      margin-bottom: 25px;
+    }
+
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 15px;
+      margin-bottom: 25px;
+    }
+
+    .card {
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+
+    .card h3 {
+      font-size: 14px;
+      color: #666;
+      margin-bottom: 10px;
+    }
+
+    .card p {
+      font-size: 24px;
+      font-weight: bold;
+    }
+
+    .form-section {
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      margin-bottom: 25px;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 15px;
+    }
+
+    input, select, button {
+      width: 100%;
+      padding: 11px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+
+    button {
+      background: #2563eb;
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    button:hover {
+      background: #1d4ed8;
+    }
+
+    .table-section {
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+    }
+
+    th, td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid #eee;
+      white-space: nowrap;
+    }
+
+    th {
+      background: #f8fafc;
+    }
+
+    .status {
+      padding: 5px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: bold;
+    }
+
+    .paid {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .pending {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .overdue {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    .delete-btn {
+      background: #dc2626;
+      width: auto;
+      padding: 7px 12px;
+    }
+
+    .delete-btn:hover {
+      background: #b91c1c;
+    }
+
+    @media (max-width: 800px) {
+      .summary,
+      .form-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    @media (max-width: 500px) {
+      body {
+        padding: 15px;
+      }
+
+      .summary,
+      .form-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="container">
+
+  <h1>Freelancer Invoice & Payment Tracker</h1>
+
+  <!-- Summary -->
+  <div class="summary">
+    <div class="card">
+      <h3>Total Invoiced</h3>
+      <p id="totalInvoiced">₹0</p>
+    </div>
+
+    <div class="card">
+      <h3>Total Paid</h3>
+      <p id="totalPaid">₹0</p>
+    </div>
+
+    <div class="card">
+      <h3>Pending</h3>
+      <p id="totalPending">₹0</p>
+    </div>
+
+    <div class="card">
+      <h3>Overdue</h3>
+      <p id="totalOverdue">₹0</p>
+    </div>
+  </div>
+
+  <!-- Add Invoice -->
+  <div class="form-section">
+    <h2>Add Invoice</h2>
+    <br>
+
+    <form id="invoiceForm">
+
+      <div class="form-grid">
+
+        <input
+          type="text"
+          id="invoiceNumber"
+          placeholder="Invoice #"
+          required
+        />
+
+        <input
+          type="text"
+          id="client"
+          placeholder="Client name"
+          required
+        />
+
+        <input
+          type="number"
+          id="amount"
+          placeholder="Amount"
+          min="0"
+          required
+        />
+
+        <input
+          type="date"
+          id="dueDate"
+          required
+        />
+
+        <select id="status">
+          <option value="Pending">Pending</option>
+          <option value="Paid">Paid</option>
+        </select>
+
+        <button type="submit">Add Invoice</button>
+
+      </div>
+
+    </form>
+  </div>
+
+  <!-- Invoice Table -->
+  <div class="table-section">
+
+    <h2>Invoices</h2>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Invoice #</th>
+          <th>Client</th>
+          <th>Amount</th>
+          <th>Due Date</th>
+          <th>Status</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+
+      <tbody id="invoiceTable"></tbody>
+    </table>
+
+  </div>
+
+</div>
+
+<script>
+
+  let invoices = JSON.parse(localStorage.getItem("invoices")) || [];
+
+  const form = document.getElementById("invoiceForm");
+  const table = document.getElementById("invoiceTable");
+
+  form.addEventListener("submit", function(e) {
+    e.preventDefault();
+
+    const invoice = {
+      id: Date.now(),
+
+      number: document.getElementById("invoiceNumber").value,
+
+      client: document.getElementById("client").value,
+
+      amount: Number(document.getElementById("amount").value),
+
+      dueDate: document.getElementById("dueDate").value,
+
+      status: document.getElementById("status").value
+    };
+
+    invoices.push(invoice);
+
+    saveInvoices();
+
+    form.reset();
+
+    renderInvoices();
+  });
+
+
+  function saveInvoices() {
+    localStorage.setItem("invoices", JSON.stringify(invoices));
+  }
+
+
+  function renderInvoices() {
+
+    table.innerHTML = "";
+
+    let totalInvoiced = 0;
+    let totalPaid = 0;
+    let totalPending = 0;
+    let totalOverdue = 0;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    invoices.forEach(invoice => {
+
+      totalInvoiced += invoice.amount;
+
+      let currentStatus = invoice.status;
+
+      const dueDate = new Date(invoice.dueDate);
+      dueDate.setHours(0, 0, 0, 0);
+
+      if (
+        invoice.status === "Pending" &&
+        dueDate < today
+      ) {
+        currentStatus = "Overdue";
+      }
+
+      if (currentStatus === "Paid") {
+        totalPaid += invoice.amount;
+      }
+
+      if (currentStatus === "Pending") {
+        totalPending += invoice.amount;
+      }
+
+      if (currentStatus === "Overdue") {
+        totalOverdue += invoice.amount;
+      }
+
+      const row = document.createElement("tr");
+
+      row.innerHTML = `
+        <td>${invoice.number}</td>
+
+        <td>${invoice.client}</td>
+
+        <td>₹${invoice.amount.toLocaleString("en-IN")}</td>
+
+        <td>${invoice.dueDate}</td>
+
+        <td>
+          <span class="status ${currentStatus.toLowerCase()}">
+            ${currentStatus}
+          </span>
+        </td>
+
+        <td>
+          <button
+            class="delete-btn"
+            onclick="deleteInvoice(${invoice.id})">
+            Delete
+          </button>
+        </td>
+      `;
+
+      table.appendChild(row);
+
+    });
+
+    document.getElementById("totalInvoiced").textContent =
+      "₹" + totalInvoiced.toLocaleString("en-IN");
+
+    document.getElementById("totalPaid").textContent =
+      "₹" + totalPaid.toLocaleString("en-IN");
+
+    document.getElementById("totalPending").textContent =
+      "₹" + totalPending.toLocaleString("en-IN");
+
+    document.getElementById("totalOverdue").textContent =
+      "₹" + totalOverdue.toLocaleString("en-IN");
+  }
+
+
+  function deleteInvoice(id) {
+
+    if (!confirm("Delete this invoice?")) {
+      return;
+    }
+
+    invoices = invoices.filter(invoice => invoice.id !== id);
+
+    saveInvoices();
+
+    renderInvoices();
+  }
+
+
+  renderInvoices();
+
+</script>
+
+</body>
+</html>
